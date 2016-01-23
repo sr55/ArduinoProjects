@@ -33,7 +33,7 @@ void setup()
 
 void loop()
 {
-    delay(1000); // Slow down the looping.
+    delay(5000); // Slow down the looping.
 
     // Initialise vars
     uint8_t buf[VW_MAX_MESSAGE_LEN];
@@ -71,22 +71,17 @@ void loop()
         }
         
         // Update the LCD
-        int tmp_index = weather.indexOf("tmp: ") + 5;
-        int rel_index = weather.indexOf("rel: ") + 5;
-        int hum_index = weather.indexOf("Hum: ") + 6;
-        int light_index = weather.indexOf("Light: ") + 7;
-                
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("T:" + weather.substring(tmp_index, tmp_index + 4) + "C H:" + weather.substring(hum_index, hum_index + 5) + "% ");
+        lcd.print("T:" + weather.substring(5,9) + "C H:" + weather.substring(52,56) + "% ");
         lcd.setCursor(0, 1);
-        lcd.print("P:" + weather.substring(rel_index, rel_index +4) + "mb L:" + weather.substring(light_index, light_index + 4) + " " + flipflopchar);
+        lcd.print("P:" + weather.substring(35,38) + "mb L:" + weather.substring(68,72) + " " + flipflopchar);
         
         digitalWrite(13, false);
     }
 
-    // If we don't get data after 10 tries, 10 seconds, Display a no-signal warning.
-    if (counter > 10) {
+    // If we don't get data after 2 tries, 10 seconds, Display a no-signal warning.
+    if (counter > 2) {
         retryCount = retryCount +1;
         lcd.clear();
         lcd.setCursor(0, 0);
