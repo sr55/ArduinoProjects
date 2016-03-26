@@ -8,6 +8,7 @@
 #include <avr/wdt.h>
 #include <SFE_BMP180.h>
 #include <Wire.h>
+#include <math.h>
 #define aref_voltage 5.00 
 #define LED_PIN (13)
 #define ALTITUDE 142.0 // Altitude of Sensor
@@ -16,6 +17,7 @@
 int transmit_pin = 8;
 int HIH4030_Pin = A3; //analog pin 0
 int light_pin = A2;
+int led_blink = 0; // Slow down the blinking.
 
 // Globals
 volatile int f_wdt=1;
@@ -62,8 +64,7 @@ void loop()
   {   
     f_wdt = 0;   // Don't forget to clear the flag.
     enterSleep(); //  Re-enter sleep mode. 
-  }
-   
+  } 
   // Read Data from sensors
   String bmp180   = getPressureData();
   String humidity = floatToString(getHumidity());
@@ -79,8 +80,13 @@ void loop()
 }
 
 void SendMessage(char* msg){
-  digitalWrite(13, true); // Flash a light to show transmitting
-  delay(1000);
+
+  led_blink = led_blink + 1;
+  if (led_blink == 4){
+     digitalWrite(13, true); // Flash a light to show transmitting
+     led_blink = 0;
+  }
+ 
   vw_send((uint8_t *)msg, strlen(msg));
   vw_wait_tx(); // Wait until the whole message is gone
   digitalWrite(13, false);
@@ -199,7 +205,7 @@ ISR(WDT_vect)
 
 void enterSleep(void)
 {
-  set_sleep_mode(SLEEP_MODE_PWR_SAVE);   /* EDIT: could also use SLEEP_MODE_PWR_DOWN for lowest power consumption. */
+  set_sleep_mode(SLEEP_MODE_PWR_DOWN);   /* EDIT: could also use SLEEP_MODE_PWR_DOWN for lowest power consumption. */
   sleep_enable();
   
   /* Now enter sleep mode. */
