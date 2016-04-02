@@ -33,24 +33,17 @@ void setup()
 
 void loop()
 {
-    delay(1000); // Slow down the looping.
-
     // Initialise vars
     uint8_t buf[VW_MAX_MESSAGE_LEN];
     uint8_t buflen = VW_MAX_MESSAGE_LEN;
-    counter = counter + 1;
-
+       
     // Check if we've got any data.   
     if (vw_get_message(buf, &buflen)) // Non-blocking
-    {
-        retryCount = 0; // We got data, reset the re-try counter
-        counter = 0;
-        
+    {      
 	      int i;
         digitalWrite(13, true); // Flash a light to show received good message
-	      // Message with a good checksum received, dump it.
 
-        char contents[73] = "Waiting ...";
+        char contents[73] = "";
 
       	for (i = 0; i < buflen; i++)
       	{
@@ -78,22 +71,10 @@ void loop()
                 
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("T:" + weather.substring(tmp_index, tmp_index + 4) + "C H:" + weather.substring(hum_index, hum_index + 5) + "% ");
+        lcd.print("T:" + weather.substring(tmp_index, tmp_index + 4) + "C H:" + weather.substring(hum_index, hum_index + 4) + "% ");
         lcd.setCursor(0, 1);
         lcd.print("P:" + weather.substring(rel_index, rel_index +4) + "mb L:" + weather.substring(light_index, light_index + 4) + " " + flipflopchar);
         
         digitalWrite(13, false);
-    }
-
-    // If we don't get data after 10 tries, 10 seconds, Display a no-signal warning.
-    if (counter > 10) {
-        retryCount = retryCount +1;
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("No Signal");
-        lcd.setCursor(0, 1);
-        lcd.print("Retry Count: " + String(retryCount));
-       
-        counter = 0; // reset  
     }
 }
