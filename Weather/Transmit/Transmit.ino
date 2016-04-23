@@ -9,6 +9,9 @@
 #include <SFE_BMP180.h>
 #include <Wire.h>
 #include <math.h>
+#include "Adafruit_SI1145.h"
+
+
 #define aref_voltage 5.00 
 #define LED_PIN (13)
 #define ALTITUDE 142.0 // Altitude of Sensor
@@ -22,6 +25,7 @@ int led_blink = 0; // Slow down the blinking.
 // Globals
 volatile int f_wdt=1;
 SFE_BMP180 pressure;
+Adafruit_SI1145 uv = Adafruit_SI1145();
 
 void setup()
 {
@@ -43,6 +47,12 @@ void setup()
     {
       Serial.println("BMP180 init fail\n\n");
       while(1); // Pause forever.
+    }
+
+
+    if (! uv.begin()) {
+      Serial.println("Didn't find Si1145");
+      while (1);
     }
        
     power_spi_disable();                // Turn off stuff we don't need
@@ -66,10 +76,14 @@ void loop()
     enterSleep(); //  Re-enter sleep mode. 
   } 
   // Read Data from sensors
-  String bmp180   = getPressureData();
+  String bmp180   = getPressureData(); // tmp, abs and rel pressure
   String humidity = floatToString(getHumidity());
-  String lightLevel = String(getLightLevel());
-  String data = bmp180 + ", Hum: " + humidity + "%, Light: " + lightLevel;
+  String lightLevel = String(getLightLevel()); // PhotoCell
+  String ir = getIR(); // Adafruit_SI1145
+  String visible = getVisible();
+  String uvi = getUvIndex();
+  String data = bmp180 + ", H: " + humidity + "%, L: " + visible + ", U: " + uvi + ", IR: " + ir ;
+
   Serial.println(data);
     
   // Transmit the data
@@ -92,6 +106,7 @@ void SendMessage(char* msg){
   digitalWrite(13, false);
 }
 
+// Basic photocell. Not calibrated to lux.
 int getLightLevel(){
    int reading  = analogRead(light_pin);
    return reading;
@@ -128,6 +143,23 @@ float getHumidity(){
   float trueRH = sensorRH / (1.0546 - 0.0026 * degreesCelsius); //temperature adjustment 
 
   return trueRH;
+}
+
+String getIR(){
+  return  floatToString(uv.readIR());
+}
+
+String getVisible(){
+  return  floatToString(uv.readVisible());
+}
+
+String getUvIndex() {
+  float UVindex = uv.readUV();
+  // the index is multiplied by 100 so to get the
+  // integer index, divide by 100!
+  UVindex /= 100.0;  
+
+  return floatToString(UVindex);
 }
 
 String getPressureData() {
