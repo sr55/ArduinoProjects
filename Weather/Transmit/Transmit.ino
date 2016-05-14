@@ -19,7 +19,6 @@
 // Pins
 int transmit_pin = 8;
 int HIH4030_Pin = A3; //analog pin 0
-int light_pin = A2;
 int led_blink = 0; // Slow down the blinking.
 
 // Globals
@@ -31,13 +30,13 @@ void setup()
 {
     digitalWrite(13, HIGH);             // Turn on the status LED
   
-    Serial.begin(9600);	                // Debugging only
+    Serial.begin(9600);                  // Debugging only
     Serial.println("Initialising...");
     pinMode(13, OUTPUT);
 
     // Initialise the IO and ISR
     vw_set_ptt_inverted(true);          // Required for DR3100
-    vw_setup(2000);	                // Bits per sec
+    vw_setup(2000);                 // Bits per sec
     vw_set_tx_pin(transmit_pin);        // Pin D3
     
     // Sensor Setup
@@ -77,39 +76,48 @@ void loop()
   } 
   // Read Data from sensors
   String bmp180   = getPressureData(); // tmp, abs and rel pressure
-  String humidity = floatToString(getHumidity());
-  String lightLevel = String(getLightLevel()); // PhotoCell
+  String humidity = "H:" + floatToString(getHumidity());
+  
   String ir = getIR(); // Adafruit_SI1145
   String visible = getVisible();
   String uvi = getUvIndex();
-  String data = bmp180 + ", H: " + humidity + "%, L: " + visible + ", U: " + uvi + ", IR: " + ir ;
+ 
+  String light = "L:" + visible + ", U:" + uvi + ", IR: " + ir ;
 
-  Serial.println(data);
-    
-  // Transmit the data
-  char tmpArr[data.length()+1];
-  data.toCharArray(tmpArr, data.length()+1);
-  char *msg = tmpArr;
-  SendMessage(msg);
+  // Splitting the transmission payload. The message is too long for the library and smaller messages should be more reliable. 
+  SendMessage(bmp180);
+  delay(50);
+  SendMessage(humidity);
+  delay(50);
+  SendMessage(light);
+
+  Serial.println("Data Sent.");
+  Serial.println("");
+  delay(50);     
 }
 
-void SendMessage(char* msg){
+void SendMessage(String data){
 
   led_blink = led_blink + 1;
   if (led_blink == 4){
      digitalWrite(13, true); // Flash a light to show transmitting
      led_blink = 0;
   }
+
+  // Convert the Data
+  char tmpArr[data.length()+1];
+  data.toCharArray(tmpArr, data.length()+1);
+  char *msg = tmpArr;
+
+  Serial.print("Sending: ");
+  Serial.print( msg);
+  Serial.println();
+
  
   vw_send((uint8_t *)msg, strlen(msg));
   vw_wait_tx(); // Wait until the whole message is gone
   digitalWrite(13, false);
-}
-
-// Basic photocell. Not calibrated to lux.
-int getLightLevel(){
-   int reading  = analogRead(light_pin);
-   return reading;
+  delay(10);
 }
 
 float getHumidity(){
@@ -179,7 +187,7 @@ String getPressureData() {
     status = pressure.getTemperature(T);
     if (status != 0)
     {     
-       result += "tmp:" + floatToString(T) + "C";
+       result += "t:" + floatToString(T) + "";
       
       // Start a pressure measurement:
       // The parameter is the oversampling setting, from 0 to 3 (highest res, longest wait).
@@ -199,7 +207,7 @@ String getPressureData() {
         status = pressure.getPressure(P,T);
         if (status != 0)
         {         
-          result += ", abs: " + floatToString(P) + "mb";
+          result += ", a: " + floatToString(P);
           
           // The pressure sensor returns abolute pressure, which varies with altitude.
           // To remove the effects of altitude, use the sealevel function and your current altitude.
@@ -208,7 +216,7 @@ String getPressureData() {
           // Result: p0 = sea-level compensated pressure in mb
           p0 = pressure.sealevel(P,ALTITUDE); // we're at 1655 meters (Boulder, CO)
 
-          result += ", rel: " + floatToString(p0) + "mb";
+          result += ", r: " + floatToString(p0);
         }
         else Serial.println("error retrieving pressure measurement\n");
       }
@@ -252,6 +260,6 @@ void enterSleep(void)
 
 String floatToString(float value) {
     char  outstr[15];
-    dtostrf(value, 7, 3, outstr);    
+    dtostrf(value, 4, 2, outstr);    
     return outstr;
 }
